@@ -1,0 +1,6 @@
+c:\users\naim\documents\visual studio 2015\Projects\8queens_simulated\8queens_simulated\bin\Debug\8queens_simulated.exe.config
+c:\users\naim\documents\visual studio 2015\Projects\8queens_simulated\8queens_simulated\bin\Debug\8queens_simulated.exe
+c:\users\naim\documents\visual studio 2015\Projects\8queens_simulated\8queens_simulated\bin\Debug\8queens_simulated.pdb
+c:\users\naim\documents\visual studio 2015\Projects\8queens_simulated\8queens_simulated\obj\Debug\8queens_simulated.csprojResolveAssemblyReference.cache
+c:\users\naim\documents\visual studio 2015\Projects\8queens_simulated\8queens_simulated\obj\Debug\8queens_simulated.exe
+c:\users\naim\documents\visual studio 2015\Projects\8queens_simulated\8queens_simulated\obj\Debug\8queens_simulated.pdb
