@@ -12,50 +12,27 @@ namespace _8queens_simulated
     {
         static void Main(string[] args)
         {
-            List<string> tablo = new List<string>();
             int totalTime = 0;
-            int totalMoves = 0;
-            int totalRestarts = 0;
 
             for (int i = 0; i < 35; i++)
             {
                 bool[,] board = initializeBoard(8); //initialize for 8x8 (8 queens)
 
-                int Moves = 0;
-                int restartCount = 0;
-                Stopwatch stopwatch = new Stopwatch();
 
-                stopwatch.Start(); // Begin timing.
+                int time = applySimulatedAnnealingAlgorithmToTheBoard(board, 35.0, 0.0, 0.03, 35, 1.005);
 
-                while (calculateCollisions(board) > 0)
-                {
-                    applyHillClimbingAlgorithmToTheBoard(board);
-                    Moves++;
-                    if (Moves > 20) //if it stucks at the local minimum
-                    {
-                        board = initializeBoard(8); //random new board
-                        Moves = 0;
-                        restartCount++;
-                    }
-                }
-                stopwatch.Stop();
+
                 drawTheBoard(board);
-                Console.WriteLine(i + 1 + ") Total Moves: " + Moves + ", Restart Count: " + restartCount + ", Time elapsed: {0} ms", stopwatch.Elapsed.Milliseconds);
-                tablo.Add(i + 1 + ") Total Moves: " + Moves + ", Restart Count: " + restartCount + ", Time elapsed:" + stopwatch.Elapsed.Milliseconds + " ms");
+                Console.WriteLine(") Time elapsed: " + time + " ms");
 
-                totalMoves += Moves;
-                totalTime += stopwatch.Elapsed.Milliseconds;
-                totalRestarts += restartCount;
+                totalTime += time;
 
                 Thread.Sleep(300); //to see the board
                 Console.Clear();
             }
 
-            foreach (String istatistik in tablo)
-            {
-                Console.WriteLine(istatistik);
-            }
-            Console.WriteLine("++Average Moves: " + totalMoves / 35 + ", Average Restarts: " + totalRestarts / 35 + ", Average Time: " + totalTime / 35 + " ms ");
+
+            Console.WriteLine("Average Time: " + (double)totalTime / 35 + " ms ");
 
             Console.ReadKey();
         }
@@ -136,72 +113,147 @@ namespace _8queens_simulated
 
         }
 
-        static void applyHillClimbingAlgorithmToTheBoard(bool[,] board)
+        static int applySimulatedAnnealingAlgorithmToTheBoard(bool[,] board, double initialTemp, double freezingTemp, double coolingFactor, double currentStabilizer, double stabilizingFactor)
         {
             int size = Convert.ToInt32(Math.Sqrt(board.Length));
-            int[,] successors = new int[size, size];
 
-            for (int i = 0; i < size; i++)
+            Stopwatch stopwatch = new Stopwatch();
+
+            stopwatch.Start(); // Begin timing.
+
+            for (double temperature = initialTemp; (temperature > freezingTemp) && (calculateCollisions(board) != 0); temperature = temperature - coolingFactor)
             {
-                //find the queen of the row first
-                int indexOfQueen = -1;
-                for (int j = 0; j < size; j++)
+                Console.WriteLine("temp : " + temperature + ", Current Fitness: " + calculateCollisions(board));
+                for (int k = 0; k < currentStabilizer; k++)
                 {
-                    if (board[i, j] == true)
+                    //bool[,] temporaryBoard = board.Clone() as bool[,];
+                    bool[,] temporaryBoard = new bool[size, size];
+                    for (int i = 0; i < size; i++)
                     {
-                        indexOfQueen = j;
-                        board[i, j] = false;
+                        for (int j = 0; j < size; j++)
+                        {
+                            temporaryBoard[i, j] = board[i, j];
+                        }
                     }
+
+                    Random rnd = new Random();
+
+                    //First make a random move
+                    int randomRowIndex;
+                    int randomColumnIndex;
+                    do
+                    {
+                        randomRowIndex = rnd.Next(8);
+                        randomColumnIndex = rnd.Next(8);
+                    }
+                    while (temporaryBoard[randomRowIndex, randomColumnIndex] == true && randomRowIndex == randomColumnIndex);
+                    for (int j = 0; j < size; j++)
+                    {
+                        if (temporaryBoard[randomRowIndex, j] == true)
+                        {
+                            temporaryBoard[randomRowIndex, j] = false;
+                        }
+                    }
+                    temporaryBoard[randomRowIndex, randomColumnIndex] = true;
+
+                    //Then make a best move
+                    int[,] successors = new int[size, size];
+
+                    for (int i = 0; i < size; i++)
+                    {
+                        //find the queen of the row first
+                        int indexOfQueen = -1;
+                        for (int j = 0; j < size; j++)
+                        {
+                            if (temporaryBoard[i, j] == true)
+                            {
+                                indexOfQueen = j;
+                                temporaryBoard[i, j] = false;
+                            }
+                        }
+                        //try all the moves on the row and save collisions
+                        for (int j = 0; j < size; j++)
+                        {
+                            if (j != indexOfQueen)
+                            {
+                                temporaryBoard[i, j] = true;
+                                successors[i, j] = calculateCollisions(temporaryBoard);
+                                temporaryBoard[i, j] = false;
+                            }
+                            else
+                            {
+                                successors[i, j] = 999; //to ignore old position
+                            }
+                        }
+                        temporaryBoard[i, indexOfQueen] = true; //fixing the row to its first position
+                    }
+
+                    //select lowest value of successors
+                    int min = 998;
+                    int indexI = -1;
+                    int indexJ = -1;
+                    for (int i = 0; i < size; i++)
+                    {
+                        for (int j = 0; j < size; j++)
+                        {
+                            if (successors[i, j] < min)
+                            {
+                                min = successors[i, j];
+                                indexI = i;
+                                indexJ = j;
+                            }
+                        }
+                    }
+
+                    //make the move, remove queen of the row first and put the new one
+                    for (int j = 0; j < size; j++)
+                    {
+                        if (temporaryBoard[indexI, j] == true)
+                        {
+                            temporaryBoard[indexI, j] = false;
+                        }
+                    }
+                    temporaryBoard[indexI, indexJ] = true;
+
+                    //drawTheBoard(temporaryBoard);
+                    //Thread.Sleep(100); //to follow steps
+
+
+                    double delta = calculateCollisions(board) - calculateCollisions(temporaryBoard);
+                    double probability = Math.Exp(delta / temperature);
+
+                    double rand = rnd.NextDouble();
+                    //Console.Clear();
+
+                    if (delta > 0)
+                    {
+                        for (int i = 0; i < size; i++)
+                        {
+                            for (int j = 0; j < size; j++)
+                            {
+                                board[i, j] = temporaryBoard[i, j];
+
+                            }
+                        }
+                    }
+                    else if (rand <= probability)
+                    {
+                        for (int i = 0; i < size; i++)
+                        {
+                            for (int j = 0; j < size; j++)
+                            {
+                                board[i, j] = temporaryBoard[i, j];
+                            }
+                        }
+                    }
+
                 }
-                //try all the moves on the row and save collisions
-                for (int j = 0; j < size; j++)
-                {
-                    if (j != indexOfQueen)
-                    {
-                        board[i, j] = true;
-                        successors[i, j] = calculateCollisions(board);
-                        board[i, j] = false;
-                    }
-                    else
-                    {
-                        successors[i, j] = 999; //to ignore old position
-                    }
-                }
-                board[i, indexOfQueen] = true; //fixing the row to its first position
+                currentStabilizer = currentStabilizer * stabilizingFactor;
             }
-
-            //select lowest value of successors
-            int min = 998;
-            int indexI = -1;
-            int indexJ = -1;
-            for (int i = 0; i < size; i++)
-            {
-                for (int j = 0; j < size; j++)
-                {
-                    if (successors[i, j] < min)
-                    {
-                        min = successors[i, j];
-                        indexI = i;
-                        indexJ = j;
-                    }
-                }
-            }
-
-            //make the move, remove queen of the row first and put the new one
-            for (int j = 0; j < size; j++)
-            {
-                if (board[indexI, j] == true)
-                {
-                    board[indexI, j] = false;
-                }
-            }
-            board[indexI, indexJ] = true;
+            stopwatch.Stop();
+            return stopwatch.Elapsed.Milliseconds;
 
 
-            drawTheBoard(board);
-            Console.WriteLine("Total Collisions: " + calculateCollisions(board));
-            //Thread.Sleep(100); //to follow steps
-            Console.Clear();
         }
 
         static void drawTheBoard(bool[,] board)
